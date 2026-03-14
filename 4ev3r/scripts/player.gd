@@ -1,5 +1,11 @@
 extends CharacterBody3D
 
+# These are for interacting with the nodes directly do not touch or edit unless you rename a node.
+@onready var COLLIDER: CollisionShape3D = $collider
+@onready var CAM_PIVOT: Node3D = $camPivot
+@onready var CAMERA: Camera3D = $camPivot/camera
+
+# Actually important things below
 @export_group("Movement Stuff")
 @export_subgroup("Booleans")
 @export var IS_DASHING : bool = false
