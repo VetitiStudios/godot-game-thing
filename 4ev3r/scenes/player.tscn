@@ -32,7 +32,7 @@ offset_right = 188.0
 offset_bottom = 23.0
 text = "SPEED:"
 
-[node name="WallJumps Label" type="Label" parent="camPivot/camera/UI/Control"]
+[node name="WallJump Label" type="Label" parent="camPivot/camera/UI/Control"]
 layout_mode = 0
 offset_top = 48.0
 offset_right = 188.0
