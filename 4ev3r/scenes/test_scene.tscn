@@ -36,4 +36,4 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.72832, 6.88672, 0.252045)
 size = Vector3(0.269531, 6.92133, 11.0255)
 
 [node name="DirectionalLight3D" type="DirectionalLight3D" parent="WorldEnvironment"]
-transform = Transform3D(1, 0, 0, 0, 0.573534, 0.819182, 0, -0.819182, 0.573534, -2.99787, 7, 6.92383)
+transform = Transform3D(1, 0, 0, 0, 0.573534, 0.819182, 0, -0.819182, 0.573534, -1.91747, 12.9096, 7.75501)

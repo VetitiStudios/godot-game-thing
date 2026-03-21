@@ -196,11 +196,9 @@ func start_dash(direction):
 	TARGET_FOV = BASE_FOV
 	IS_DASHING = false
 
-
 func get_wall_collision_normal() -> Vector3:
 	for i in range(get_slide_collision_count()):
 		var collision = get_slide_collision(i)
 		if collision.get_normal().y < 0.1:
 			return collision.get_normal()
-
 	return Vector3.ZERO
