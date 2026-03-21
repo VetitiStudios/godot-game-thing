@@ -23,12 +23,14 @@ extends CharacterBody3D
 @export var WALL_COLLIED: bool = false
 @export var IS_MOVING: bool = false
 @export var IS_JUMPING: bool = false
+@export var IS_SLAMMING: bool = false
 @export var CAN_WALL_JUMP: bool = false
 
 @export_subgroup("General Variables (gravity, friction, etc)")
 @export var FRICTION: float = 5.0
 @export var FRICTION_DELAY: float = 0.5
 @export var GRAVITY: float = 2.5
+
 
 @export_subgroup("Speed Alterations")
 @export var SPEED: float = 0.0
@@ -47,9 +49,15 @@ extends CharacterBody3D
 @export var WALL_JUMP_ANGLE: float = 0.0
 @export var WALL_JUMP_FORCE: float = 10.0
 
-var grounded_time: float = 0.0
-var air_max_speed: float = MAX_SPEED
+@export_subgroup("Slam Stuff")
+@export var SLAM_SPEED: int = 15
+@export var SLAM_WAIT: float = 0.5
 
+
+var grounded_time: float = 0.0
+var air_max_speed: float:
+	get:
+		return MAX_SPEED
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
@@ -63,7 +71,6 @@ func _ready():
 	BASE_FOV = camera.fov
 	TARGET_FOV = BASE_FOV
 
-
 func _input(event):
 	if event is InputEventMouseMotion:
 		rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
@@ -75,15 +82,18 @@ func _input(event):
 	if Input.is_action_just_pressed("ui_cancel"):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
-
 func _physics_process(delta):
 	GROUNDED = is_on_floor()
+	SPEED = velocity.length()
 
 	# Gravity
 	if not GROUNDED:
+		grounded_time = 0.0
 		velocity.y -= GRAVITY * delta * 10.0
-	elif velocity.y < 0:
-		velocity.y = 0
+	else:
+		grounded_time += delta
+		if grounded_time >= SLAM_WAIT:
+			IS_SLAMMING = false
 
 	# Movement input
 	var input_dir = Input.get_vector("left", "right", "forward", "backward")
@@ -91,7 +101,6 @@ func _physics_process(delta):
 	var direction = (cam_basis.z * input_dir.y + cam_basis.x * input_dir.x)
 	direction.y = 0
 	direction = direction.normalized()
-
 	IS_MOVING = direction.length() > 0
 
 	# Air movement
@@ -108,16 +117,15 @@ func _physics_process(delta):
 
 		if grounded_time > 0:
 			grounded_time -= delta
-
 	else:
 		# Ground movement
 		if grounded_time > FRICTION_DELAY:
-			if velocity.length() > MAX_SPEED:
+			var horizontal_velocity = Vector3(velocity.x, 0, velocity.z)
+			if horizontal_velocity.length() > MAX_SPEED:
 				velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
 				velocity.z = move_toward(velocity.z, 0, FRICTION * delta)
 
-		if GROUNDED:
-			grounded_time += delta
+		grounded_time += delta
 
 		if IS_MOVING:
 			var target_velocity = direction * MAX_SPEED
@@ -138,12 +146,17 @@ func _physics_process(delta):
 			REMAINING_WALL_JUMPS -= 1
 			IS_JUMPING = true
 			grounded_time = 0.0
-
-		elif GROUNDED:
+		elif GROUNDED and !IS_SLAMMING:
 			velocity.y = JUMP_HEIGHT
 			IS_JUMPING = true
 			REMAINING_WALL_JUMPS = 3
 			grounded_time = 0.0
+		elif GROUNDED and IS_SLAMMING and grounded_time <= SLAM_WAIT:
+			IS_JUMPING = true
+			grounded_time = 0.0
+			REMAINING_WALL_JUMPS = 3
+			velocity.y = SLAM_SPEED
+			IS_SLAMMING = false
 
 	# Dashing
 	if Input.is_action_just_pressed("dash") and not IS_DASHING and REMAINING_DASHES > 0:
@@ -153,8 +166,15 @@ func _physics_process(delta):
 		if REMAINING_DASHES < 3:
 			DASH_CHARGE += DASH_CHARGE_SPEED
 			if DASH_CHARGE >= 1.0:
-				REMAINING_DASHES = 3
+				REMAINING_DASHES += 1
 				DASH_CHARGE = 0
+
+	# Slam
+	if Input.is_action_just_pressed("slam") and not GROUNDED:
+		velocity.y = -SLAM_SPEED
+		velocity.x = 0
+		velocity.z = 0
+		IS_SLAMMING = true
 
 	# Camera tilt
 	var target_tilt = 0.0
@@ -171,7 +191,6 @@ func _physics_process(delta):
 	camera.fov = lerp(camera.fov, TARGET_FOV, delta * FOV_LERP_SPEED)
 
 	move_and_slide()
-
 
 func start_dash(direction):
 	if direction == Vector3.ZERO:

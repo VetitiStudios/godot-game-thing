@@ -15,9 +15,7 @@ func _process(delta):
 		return
 
 	# --- Horizontal speed ---
-	var vel = player.velocity
-	vel.y = 0
-	var speed = round(vel.length() * 100) / 100.0
+	var speed = player.SPEED
 	speed_label.text = "Speed: " + str(speed)
 
 	# --- Acceleration ---
