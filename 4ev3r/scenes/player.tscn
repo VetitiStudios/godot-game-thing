@@ -7,8 +7,6 @@
 
 [node name="player" type="CharacterBody3D"]
 script = ExtResource("1_twpaa")
-BASE_FOV = 90.0
-TARGET_FOV = 90.0
 FOV_LERP_SPEED = 4.0
 MAX_TILT = 0.01
 
