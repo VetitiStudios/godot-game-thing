@@ -9,12 +9,14 @@ extends Control
 @onready var ammo_label = $"Ammo Label"
 
 var player = null
+var Gun = null
 var last_velocity := Vector3.ZERO
 
 func _process(delta):
 	if player == null:
 		return
-
+	if Gun == null:
+		return
 	# --- Horizontal speed ---
 	var speed = player.SPEED
 	speed_label.text = "Speed: " + str(speed)
@@ -40,4 +42,7 @@ func _process(delta):
 	last_velocity = player.velocity
 
 	# --- AMMO ---
-	ammo_label.text = "Ammo: " + str(player.current_ammo) + " : " + str(player.max_ammo)
+	ammo_label.text = "Ammo: " + str(Gun.CURRENT_GUN["current_ammo"]) + " : " + str(Gun.CURRENT_GUN["max_ammo"]) + "\n" + "target tween: " + str(Gun.CURRENT_GUN["targetTweenDir"]) + "\n" + "prev tween: " + str(Gun.CURRENT_GUN["prevTweenDir"])
+
+	# -- test ---
+	

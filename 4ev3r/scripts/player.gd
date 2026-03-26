@@ -52,32 +52,6 @@ extends CharacterBody3D
 @export var SLAM_SPEED: int = 15
 @export var SLAM_WAIT: float = 0.5
 
-@export_group("Gun Stuff")
-@onready var PISTOL = {
-	"animation": $gun/Control/pistol,
-	"fire_animation_len": .15,
-	"current_animation": "idle",
-	"current_ammo": 12,
-	"max_ammo": 12,
-	"type": "pistol",
-	"top Y": 541.0,
-	"bottom Y": 914.0,
-	"tween_speed": 5.0,
-	"damage": 5
-}
-@onready var CURRENT_GUN = PISTOL
-var max_ammo:=0
-var current_ammo:=0
-@onready var FIRE_TIMER: Timer
-@export var fire_queue: int = 0
-@export var is_firing: bool = false
-@export var fire_button_held: bool = false
-
-@onready var RELOAD_TIMER: Timer
-@export
-
-
-
 
 var grounded_time: float = 0.0
 var air_max_speed: float:
@@ -96,12 +70,6 @@ func _ready():
 	BASE_FOV = camera.fov
 	TARGET_FOV = BASE_FOV
 
-	FIRE_TIMER = Timer.new()
-	FIRE_TIMER.one_shot = true
-	add_child(FIRE_TIMER)
-	FIRE_TIMER.timeout.connect(_on_fire_timer_timeout)
-
-
 func _input(event):
 	if event is InputEventMouseMotion:
 		rotate_y(-event.relative.x * MOUSE_SENSITIVITY)
@@ -113,18 +81,7 @@ func _input(event):
 	if Input.is_action_just_pressed("ui_cancel"):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
-	if event.is_action_pressed("fire"):
-		fire_button_held = true
-		fire()
-
-	if event.is_action_released("fire"):
-		fire_button_held = false
-
-
 func _physics_process(delta):
-	CURRENT_GUN["animation"].play(CURRENT_GUN["current_animation"])
-	current_ammo = CURRENT_GUN["current_ammo"]
-	max_ammo = CURRENT_GUN["max_ammo"]
 	GROUNDED = is_on_floor()
 	SPEED = velocity.length()
 
@@ -258,72 +215,9 @@ func start_dash(direction):
 	TARGET_FOV = BASE_FOV
 	IS_DASHING = false
 
-func tween_to_position(startposition,endposition, time):
-	var _time:= time
-	var _endposition := startposition
-	var _startposition := endposition
-	var _finished := false
-
-	if _startposition>_endposition:
-		while !_finished:
-
-
-	elif _endposition>_startposition
-		while !_finished:
-
-	else:
-		_finished = true
-
 func get_wall_collision_normal() -> Vector3:
 	for i in range(get_slide_collision_count()):
 		var collision = get_slide_collision(i)
 		if collision.get_normal().y < 0.1:
 			return collision.get_normal()
 	return Vector3.ZERO
-
-
-func fire() -> void:
-	if CURRENT_GUN["current_ammo"] <= 0:
-		CURRENT_GUN["current_animation"] = "empty"
-		return
-
-	fire_queue += 1
-
-	if not is_firing:
-		_start_fire_animation()
-
-func _pistol_reload() -> void:
-	CURRENT_GUN["current_ammo"] = 0
-	CURRENT_GUN["current_animation"] = "empty"
-
-
-
-
-func _start_fire_animation() -> void:
-	if fire_queue <= 0 or CURRENT_GUN["current_ammo"] <= 0:
-		return
-
-	is_firing = true
-	fire_queue -= 1
-
-	CURRENT_GUN["current_animation"] = "fire"
-	CURRENT_GUN["current_ammo"] -= 1
-
-	FIRE_TIMER.wait_time = CURRENT_GUN["fire_animation_len"]
-	FIRE_TIMER.start()
-
-
-
-func _on_fire_timer_timeout() -> void:
-	if CURRENT_GUN["current_ammo"] > 0:
-		CURRENT_GUN["current_animation"] = "idle"
-	else:
-		CURRENT_GUN["current_animation"] = "empty"
-
-	is_firing = false
-
-	if fire_button_held and CURRENT_GUN["current_ammo"] > 0:
-		fire_queue += 1
-
-	if fire_queue > 0:
-		_start_fire_animation()

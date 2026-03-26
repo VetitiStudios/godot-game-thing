@@ -1,7 +1,8 @@
-[gd_scene load_steps=14 format=3 uid="uid://npmsbepnx4up"]
+[gd_scene load_steps=15 format=3 uid="uid://npmsbepnx4up"]
 
 [ext_resource type="Script" uid="uid://ccl3l327g3kab" path="res://4ev3r/scripts/player.gd" id="1_twpaa"]
 [ext_resource type="Script" uid="uid://deta71lxn5rij" path="res://4ev3r/scripts/ui.gd" id="2_tjaaq"]
+[ext_resource type="Script" uid="uid://cirrvwapnir4p" path="res://4ev3r/scripts/gun.gd" id="3_kmg5g"]
 [ext_resource type="Texture2D" uid="uid://egc4kpxnvamv" path="res://4ev3r/assets/pistol/empty.png" id="3_syr44"]
 [ext_resource type="Texture2D" uid="uid://ij3htx5yc3w0" path="res://4ev3r/assets/pistol/idle.png" id="5_kmg5g"]
 
@@ -76,38 +77,8 @@ animations = [{
 
 [node name="player" type="CharacterBody3D"]
 script = ExtResource("1_twpaa")
-MOUSE_SENSITIVITY = null
-CAMERA_X_ROTATION = null
-BASE_FOV = null
-TARGET_FOV = null
 FOV_LERP_SPEED = 4.0
-TILT_ANGLE = null
-TARGET_TILT = null
-TILT_SPEED = null
 MAX_TILT = 0.01
-IS_DASHING = null
-GROUNDED = null
-WALL_COLLIED = null
-IS_MOVING = null
-IS_JUMPING = null
-IS_SLAMMING = null
-CAN_WALL_JUMP = null
-FRICTION = null
-FRICTION_DELAY = null
-GRAVITY = null
-SPEED = null
-MAX_SPEED = null
-ACCELERATION = null
-DASH_SPEED = null
-JUMP_HEIGHT = null
-REMAINING_DASHES = null
-DASH_CHARGE_SPEED = null
-DASH_CHARGE = null
-REMAINING_WALL_JUMPS = null
-WALL_JUMP_ANGLE = null
-WALL_JUMP_FORCE = null
-SLAM_SPEED = null
-SLAM_WAIT = null
 
 [node name="collider" type="CollisionShape3D" parent="."]
 shape = SubResource("CapsuleShape3D_cdbq2")
@@ -175,7 +146,9 @@ offset_right = 212.0
 offset_bottom = 167.0
 text = "Ammo Count:"
 
-[node name="gun" type="Node3D" parent="."]
+[node name="gun" type="Node3D" parent="." node_paths=PackedStringArray("ui")]
+script = ExtResource("3_kmg5g")
+ui = NodePath("../camPivot/camera/UI/Control")
 
 [node name="Control" type="Control" parent="gun"]
 layout_mode = 3
@@ -184,7 +157,7 @@ offset_right = 40.0
 offset_bottom = 40.0
 
 [node name="pistol" type="AnimatedSprite2D" parent="gun/Control"]
-position = Vector2(939, 914)
+position = Vector2(939, 541)
 scale = Vector2(2, 2)
 sprite_frames = SubResource("SpriteFrames_d3ppy")
 animation = &"fire"
