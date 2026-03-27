@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3 uid="uid://npmsbepnx4up"]
+[gd_scene load_steps=17 format=3 uid="uid://npmsbepnx4up"]
 
 [ext_resource type="Script" uid="uid://ccl3l327g3kab" path="res://4ev3r/scripts/player.gd" id="1_twpaa"]
 [ext_resource type="Script" uid="uid://deta71lxn5rij" path="res://4ev3r/scripts/ui.gd" id="2_tjaaq"]
@@ -7,6 +7,9 @@
 [ext_resource type="Texture2D" uid="uid://ij3htx5yc3w0" path="res://4ev3r/assets/pistol/idle.png" id="5_kmg5g"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_cdbq2"]
+
+[sub_resource type="AudioStreamWAV" id="AudioStreamWAV_kmg5g"]
+format = 1
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_kmg5g"]
 atlas = ExtResource("3_syr44")
@@ -75,7 +78,7 @@ animations = [{
 "speed": 8.0
 }]
 
-[sub_resource type="AudioStream" id="AudioStream_kmg5g"]
+[sub_resource type="AudioStreamPolyphonic" id="AudioStreamPolyphonic_kmg5g"]
 
 [node name="player" type="CharacterBody3D"]
 script = ExtResource("1_twpaa")
@@ -151,6 +154,7 @@ text = "Ammo Count:"
 [node name="gun" type="Node3D" parent="." node_paths=PackedStringArray("ui")]
 script = ExtResource("3_kmg5g")
 ui = NodePath("../camPivot/camera/UI/Control")
+fire_sounds = Array[AudioStream]([SubResource("AudioStreamWAV_kmg5g")])
 
 [node name="Control" type="Control" parent="gun"]
 layout_mode = 3
@@ -166,5 +170,9 @@ animation = &"fire"
 frame = 1
 frame_progress = 1.0
 
-[node name="audio" type="AudioStreamPlayer" parent="."]
-stream = SubResource("AudioStream_kmg5g")
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = SubResource("AudioStreamPolyphonic_kmg5g")
+
+[node name="AudioListener3D" type="AudioListener3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+current = true
