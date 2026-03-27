@@ -25,6 +25,9 @@ extends Node3D
 @onready var CURRENT_GUN = PISTOL
 @export var ui: Control
 
+# This allows you to assign multiple audio files in the editor
+@export var fire_sounds: Array[AudioStream] = []
+
 var sway_active: bool = false
 var fire_queue: int = 0
 var is_firing: bool = false

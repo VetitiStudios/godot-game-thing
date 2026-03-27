@@ -1,4 +1,4 @@
-[gd_scene load_steps=15 format=3 uid="uid://npmsbepnx4up"]
+[gd_scene load_steps=16 format=3 uid="uid://npmsbepnx4up"]
 
 [ext_resource type="Script" uid="uid://ccl3l327g3kab" path="res://4ev3r/scripts/player.gd" id="1_twpaa"]
 [ext_resource type="Script" uid="uid://deta71lxn5rij" path="res://4ev3r/scripts/ui.gd" id="2_tjaaq"]
@@ -74,6 +74,8 @@ animations = [{
 "name": &"idle",
 "speed": 8.0
 }]
+
+[sub_resource type="AudioStream" id="AudioStream_kmg5g"]
 
 [node name="player" type="CharacterBody3D"]
 script = ExtResource("1_twpaa")
@@ -163,3 +165,6 @@ sprite_frames = SubResource("SpriteFrames_d3ppy")
 animation = &"fire"
 frame = 1
 frame_progress = 1.0
+
+[node name="audio" type="AudioStreamPlayer" parent="."]
+stream = SubResource("AudioStream_kmg5g")
