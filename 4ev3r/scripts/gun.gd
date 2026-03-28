@@ -14,11 +14,11 @@ extends Node3D
 	"reloadBottomY": 914.0,
 	"reloadTimer": 3.0,
 	"walkXLeft": 859.0,
-	"walkYBottom": 605.0,
+	"walkYBottom": 585.0,
 	"walkXRight": 1019.0,
 	"sway_time": .5,
 	"targetTweenDir": "left",
-	"prevTweenDir": "",
+	"prevTweenDir": "jew",
 	"damage": 5,
 }
 @onready var FIRE_TIMER: Timer
@@ -115,7 +115,6 @@ func _start_gun_sway() -> void:
 
 		var prev_dir = CURRENT_GUN["targetTweenDir"]
 		if CURRENT_GUN["targetTweenDir"] == "center":
-			# Alternate sides based on last side
 			if CURRENT_GUN["prevTweenDir"] == "left":
 				CURRENT_GUN["targetTweenDir"] = "right"
 			elif CURRENT_GUN["prevTweenDir"] == "right":

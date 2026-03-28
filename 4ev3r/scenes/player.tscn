@@ -103,53 +103,11 @@ offset_right = 128.0
 offset_bottom = 24.0
 script = ExtResource("2_tjaaq")
 
-[node name="Speed Label" type="Label" parent="camPivot/camera/UI/Control"]
+[node name="label" type="Label" parent="camPivot/camera/UI/Control"]
 layout_mode = 0
 offset_right = 188.0
 offset_bottom = 23.0
 text = "SPEED:"
-
-[node name="WallJump Label" type="Label" parent="camPivot/camera/UI/Control"]
-layout_mode = 0
-offset_top = 48.0
-offset_right = 188.0
-offset_bottom = 71.0
-text = "WALLJUMPS:"
-
-[node name="Acceleration Label" type="Label" parent="camPivot/camera/UI/Control"]
-layout_mode = 0
-offset_top = 24.0
-offset_right = 212.0
-offset_bottom = 47.0
-text = "ACCELERATION: "
-
-[node name="FPS Label" type="Label" parent="camPivot/camera/UI/Control"]
-layout_mode = 0
-offset_top = 72.0
-offset_right = 212.0
-offset_bottom = 95.0
-text = "FPS: "
-
-[node name="Dash Label" type="Label" parent="camPivot/camera/UI/Control"]
-layout_mode = 0
-offset_top = 96.0
-offset_right = 212.0
-offset_bottom = 119.0
-text = "Dash: "
-
-[node name="DashCharge Label" type="Label" parent="camPivot/camera/UI/Control"]
-layout_mode = 0
-offset_top = 120.0
-offset_right = 212.0
-offset_bottom = 143.0
-text = "Dash Charge: "
-
-[node name="Ammo Label" type="Label" parent="camPivot/camera/UI/Control"]
-layout_mode = 0
-offset_top = 144.0
-offset_right = 212.0
-offset_bottom = 167.0
-text = "Ammo Count:"
 
 [node name="gun" type="Node3D" parent="." node_paths=PackedStringArray("ui")]
 script = ExtResource("3_kmg5g")
