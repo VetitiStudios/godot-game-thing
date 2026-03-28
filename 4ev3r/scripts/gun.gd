@@ -22,76 +22,112 @@ extends Node3D
 	"damage": 5,
 }
 @onready var FIRE_TIMER: Timer
-@onready var CURRENT_GUN = PISTOL
+@onready var CURRENT_GUN = {}
 @export var ui: Control
-
-# This allows you to assign multiple audio files in the editor
 @export var fire_sounds: Array[AudioStream] = []
 
+var sway_tween: Tween = null
 var sway_active: bool = false
-var fire_queue: int = 0
-var is_firing: bool = false
 var fire_button_held: bool = false
+var is_firing: bool = false
 var is_reloading: bool = false
-var max_ammo:=0
-var current_ammo:=0
-var movekeys = ["forward","backward","left","right"]
-var moving = false
+var moving: bool = false
 
 func _ready():
+	var PISTOL = load_json("res://4ev3r/gundata/pistol.json")
+	PISTOL["current_ammo"] = PISTOL["max_ammo"]
+	PISTOL["animation"] = $Control/pistol
+	CURRENT_GUN = PISTOL
 	CURRENT_GUN["current_animation"] = "idle"
+
 	FIRE_TIMER = Timer.new()
 	FIRE_TIMER.one_shot = true
 	add_child(FIRE_TIMER)
-	FIRE_TIMER.timeout.connect(_on_fire_timer_timeout)
+
 	if ui:
 		ui.Gun = self
-	else:
-		print("Warning: UI/Control node not found under camera!")
 
 func _input(event):
-	if Input.is_action_pressed("forward") or Input.is_action_pressed("backward") or Input.is_action_pressed("left") or Input.is_action_pressed("right"):
-		moving = true
-	else:
-		moving = false
-	if Input.is_action_pressed("fire"):
-		fire()
-	if Input.is_action_just_pressed("reload"):
+	moving = (
+		Input.is_action_pressed("forward") or
+		Input.is_action_pressed("backward") or
+		Input.is_action_pressed("left") or
+		Input.is_action_pressed("right")
+	)
+
+	if Input.is_action_just_pressed("fire"):
+		fire_button_held = true
+		_start_fire()
+	elif Input.is_action_just_released("fire"):
+		fire_button_held = false
+
+	if Input.is_action_just_pressed("reload") and not is_reloading:
 		if CURRENT_GUN["type"] == "pistol":
 			is_reloading = true
 			_pistol_reload()
 
+
 func _process(delta):
 	CURRENT_GUN["animation"].play(CURRENT_GUN["current_animation"])
+
 	if moving and not sway_active and not is_reloading:
 		sway_active = true
-		_start_gun_sway()
+		_start_sway()
 
-func fire() -> void:
+
+func _start_fire() -> void:
+	if is_reloading:
+		return
 	if CURRENT_GUN["current_ammo"] <= 0:
 		CURRENT_GUN["current_animation"] = "empty"
 		return
-
-	fire_queue += 1
-
 	if not is_firing:
-		_start_fire_animation()
+		is_firing = true
+		_fire_loop()
+
+
+func _fire_loop() -> void:
+	if CURRENT_GUN["current_ammo"] <= 0:
+		CURRENT_GUN["current_animation"] = "empty"
+		is_firing = false
+		return
+
+	CURRENT_GUN["current_animation"] = "fire"
+	CURRENT_GUN["current_ammo"] -= 1
+
+	FIRE_TIMER.wait_time = CURRENT_GUN["fire_animation_len"]
+	FIRE_TIMER.start()
+
+	await FIRE_TIMER.timeout
+
+	CURRENT_GUN["current_animation"] = (
+		"idle" if CURRENT_GUN["current_ammo"] > 0 else "empty"
+	)
+
+	if fire_button_held and CURRENT_GUN["current_ammo"] > 0:
+		_fire_loop()
+	else:
+		is_firing = false
+
 
 func _pistol_reload() -> void:
-	var _target_sprite: AnimatedSprite2D = $Control/pistol
-	CURRENT_GUN["current_ammo"] = 0
+	var sprite: AnimatedSprite2D = $Control/pistol
+
 	CURRENT_GUN["current_animation"] = "empty"
-	var _tween = create_tween()
-	_tween.set_ease(Tween.EASE_IN)
-	_tween.tween_property(_target_sprite,"position",Vector2(PISTOL["reloadX"],PISTOL["reloadBottomY"]),PISTOL["reloadTimer"]/2)
-	await _tween.finished
-	_tween = create_tween()
+	CURRENT_GUN["current_ammo"] = 0
+
+	var t := create_tween()
+	t.set_ease(Tween.EASE_IN)
+	t.tween_property(
+		sprite,
+		"position",
+		Vector2(CURRENT_GUN["reloadX"], CURRENT_GUN["reloadBottomY"]),
+		CURRENT_GUN["reloadTimer"] / 2
+	)
+	await t.finished
+
 	CURRENT_GUN["current_ammo"] = CURRENT_GUN["max_ammo"]
 	CURRENT_GUN["current_animation"] = "idle"
-	_tween.set_ease(Tween.EASE_OUT)
-	_tween.tween_property(_target_sprite,"position",Vector2(PISTOL["reloadX"],PISTOL["reloadTopY"]),PISTOL["reloadTimer"]/2)
-	await _tween.finished
-	is_reloading = false
 
 func _start_gun_sway() -> void:
 	var _target_sprite: AnimatedSprite2D = CURRENT_GUN["animation"]
@@ -123,34 +159,81 @@ func _start_gun_sway() -> void:
 				CURRENT_GUN["targetTweenDir"] = ["left", "right"][randi_range(0, 1)]
 		else:
 			CURRENT_GUN["targetTweenDir"] = "center"
+	t = create_tween()
+	t.set_ease(Tween.EASE_OUT)
+	t.tween_property(
+		sprite,
+		"position",
+		Vector2(CURRENT_GUN["reloadX"], CURRENT_GUN["reloadTopY"]),
+		CURRENT_GUN["reloadTimer"] / 2
+	)
+	await t.finished
 
-		CURRENT_GUN["prevTweenDir"] = prev_dir
+	is_reloading = false
 
-	sway_active = false
 
-func _start_fire_animation() -> void:
-	if fire_queue <= 0 or CURRENT_GUN["current_ammo"] <= 0:
+func _start_sway() -> void:
+	if sway_tween and sway_tween.is_running():
 		return
+	sway_tween = _sway_step()
 
-	is_firing = true
-	fire_queue -= 1
 
-	CURRENT_GUN["current_animation"] = "fire"
-	CURRENT_GUN["current_ammo"] -= 1
+func _sway_step() -> Tween:
+	var sprite: AnimatedSprite2D = CURRENT_GUN["animation"]
+	var tween := create_tween()
 
-	FIRE_TIMER.wait_time = CURRENT_GUN["fire_animation_len"]
-	FIRE_TIMER.start()
+	var target_pos = _get_sway_target()
 
-func _on_fire_timer_timeout() -> void:
-	if CURRENT_GUN["current_ammo"] > 0:
-		CURRENT_GUN["current_animation"] = "idle"
-	else:
-		CURRENT_GUN["current_animation"] = "empty"
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(sprite, "position", target_pos, CURRENT_GUN["sway_time"])
 
-	is_firing = false
+	tween.finished.connect(func():
+		if moving and not is_reloading:
+			var current = CURRENT_GUN["targetTweenDir"]
+			var prev = CURRENT_GUN["prevTweenDir"]
+			CURRENT_GUN["targetTweenDir"] = _next_sway_dir(current, prev)
+			CURRENT_GUN["prevTweenDir"] = current
+			sway_tween = _sway_step()
+		else:
+			sway_active = false
+	)
 
-	if fire_button_held and CURRENT_GUN["current_ammo"] > 0:
-		fire_queue += 1
+	return tween
 
-	if fire_queue > 0:
-		_start_fire_animation()
+func _next_sway_dir(current: String, prev: String) -> String:
+	match current:
+		"left":
+			return "center"
+
+		"right":
+			return "center"
+
+		"center":
+			# Decide based on previous sway direction
+			if prev == "left":
+				return "right"
+			elif prev == "right":
+				return "left"
+			else:
+				# First-time sway; pick a random side
+				return ["left", "right"][randi_range(0, 1)]
+
+		_:
+			return "center"
+
+
+func _get_sway_target() -> Vector2:
+	match CURRENT_GUN["targetTweenDir"]:
+		"left":
+			return Vector2(CURRENT_GUN["walkXLeft"], CURRENT_GUN["walkYBottom"])
+		"right":
+			return Vector2(CURRENT_GUN["walkXRight"], CURRENT_GUN["walkYBottom"])
+		_:
+			return Vector2(CURRENT_GUN["centeredX"], CURRENT_GUN["centeredY"])
+
+
+func load_json(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	var text := file.get_as_text()
+	file.close()
+	return JSON.parse_string(text)
