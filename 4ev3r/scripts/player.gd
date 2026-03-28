@@ -4,6 +4,7 @@ extends CharacterBody3D
 @onready var cam_pivot: Node3D = $camPivot
 @onready var camera: Camera3D = $camPivot/camera
 
+# Camera Stuff
 @export_group("Camera Stuff")
 @export_subgroup("Direct Alterations")
 @export var MOUSE_SENSITIVITY: float = 0.002
@@ -12,59 +13,76 @@ extends CharacterBody3D
 @export var TARGET_FOV := 90.0
 @export var FOV_LERP_SPEED := 8.0
 @export var TILT_ANGLE := 0.0
+@export var TARGET_TILT := 0.0
 @export var TILT_SPEED := 10.0
 @export var MAX_TILT := deg_to_rad(2)
 
+# Movement Stuff
 @export_group("Movement Stuff")
 @export_subgroup("Booleans")
 @export var IS_DASHING: bool = false
 @export var GROUNDED: bool = false
+@export var WALL_COLLIED: bool = false
 @export var IS_MOVING: bool = false
 @export var IS_JUMPING: bool = false
 @export var IS_SLAMMING: bool = false
+@export var CAN_WALL_JUMP: bool = false
 
-@export_subgroup("General Variables")
+@export_subgroup("General Variables (gravity, friction, etc)")
 @export var FRICTION: float = 5.0
 @export var FRICTION_DELAY: float = 0.5
 @export var GRAVITY: float = 2.5
 
-@export_subgroup("Speed & Acceleration")
+@export_subgroup("Speed Alterations")
+@export var SPEED: float = 0.0
 @export var MAX_SPEED: float = 5.0
 @export var ACCELERATION: float = 5.0
 @export var DASH_SPEED: float = 15.0
 @export var JUMP_HEIGHT: float = 5.5
 
-@export_subgroup("Dash Vars")
+# Dash vars
+@export_subgroup("Dash vars")
 @export var REMAINING_DASHES: int = 3
 @export var DASH_CHARGE_SPEED: float = 0.001
 @export var DASH_CHARGE: float = 0.0
 
+# Wall Stuff
 @export_subgroup("Wall Stuff")
 @export var REMAINING_WALL_JUMPS: int = 3
+@export var WALL_JUMP_ANGLE: float = 0.0
 @export var WALL_JUMP_FORCE: float = 10.0
-@export var WALL_JUMP_INHERIT_FACTOR: float = 0.8
-@export var WALL_JUMP_COOLDOWN: float = 0.2
-var walljump_cooldown_timer := 0.0
 
+# Slam Stuff
 @export_subgroup("Slam Stuff")
 @export var SLAM_SPEED: int = 15
 @export var SLAM_WAIT: float = 0.5
 
+# Internal vars
 var grounded_time: float = 0.0
-var SPEED: float = 0.0
-var last_walljump_time: float = -1.0
+var air_max_speed: float: 
+	get: return MAX_SPEED
 
-var air_max_speed: float:
-	get:
-		return MAX_SPEED
+var dash_timer: Timer
 
 func _ready():
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	BASE_FOV = camera.fov
-	TARGET_FOV = BASE_FOV
+	
+	# Cache UI reference
 	var ui = camera.get_node_or_null("UI/Control")
 	if ui:
 		ui.player = self
+	else:
+		print("Warning: UI/Control node not found under camera!")
+
+	BASE_FOV = camera.fov
+	TARGET_FOV = BASE_FOV
+
+	# Dash timer to prevent memory leak from creating many timers
+	dash_timer = Timer.new()
+	dash_timer.wait_time = 0.2
+	dash_timer.one_shot = true
+	dash_timer.connect("timeout", Callable(self, "_on_dash_timeout"))
+	add_child(dash_timer)
 
 func _input(event):
 	if event is InputEventMouseMotion:
@@ -76,20 +94,11 @@ func _input(event):
 	if Input.is_action_just_pressed("ui_cancel"):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 
-func apply_bhop_redirect(direction: Vector3):
-	var horizontal = Vector3(velocity.x, 0, velocity.z)
-	var speed = horizontal.length()
-	if direction.length() > 0.1:
-		horizontal = direction.normalized() * speed
-	velocity.x = horizontal.x
-	velocity.z = horizontal.z
-
 func _physics_process(delta):
-	if walljump_cooldown_timer > 0.0:
-		walljump_cooldown_timer -= delta
 	GROUNDED = is_on_floor()
 	SPEED = velocity.length()
 
+	# Gravity
 	if not GROUNDED:
 		grounded_time = 0.0
 		velocity.y -= GRAVITY * delta * 10.0
@@ -98,13 +107,15 @@ func _physics_process(delta):
 		if grounded_time >= SLAM_WAIT:
 			IS_SLAMMING = false
 
+	# Movement input
 	var input_dir = Input.get_vector("left", "right", "forward", "backward")
 	var cam_basis = camera.global_transform.basis
 	var direction = (cam_basis.z * input_dir.y + cam_basis.x * input_dir.x)
 	direction.y = 0
 	direction = direction.normalized()
-	IS_MOVING = direction.length() > 0.1
+	IS_MOVING = direction.length() > 0
 
+	# Air movement
 	if not GROUNDED:
 		var horizontal_velocity = Vector3(velocity.x, 0, velocity.z)
 		var speed = horizontal_velocity.length()
@@ -116,12 +127,13 @@ func _physics_process(delta):
 		if grounded_time > 0:
 			grounded_time -= delta
 	else:
+		# Ground movement
 		if grounded_time > FRICTION_DELAY:
 			var horizontal_velocity = Vector3(velocity.x, 0, velocity.z)
 			if horizontal_velocity.length() > MAX_SPEED:
 				velocity.x = move_toward(velocity.x, 0, FRICTION * delta)
 				velocity.z = move_toward(velocity.z, 0, FRICTION * delta)
-
+		grounded_time += delta
 		if IS_MOVING:
 			var target_velocity = direction * MAX_SPEED
 			velocity.x = move_toward(velocity.x, target_velocity.x, ACCELERATION * delta * 10.0)
@@ -130,34 +142,29 @@ func _physics_process(delta):
 			velocity.x = move_toward(velocity.x, 0, FRICTION * delta * 6.0)
 			velocity.z = move_toward(velocity.z, 0, FRICTION * delta * 6.0)
 
+	# Jumping
 	if Input.is_action_just_pressed("jump"):
-		var can_walljump = is_on_wall_only() and REMAINING_WALL_JUMPS > 0 and walljump_cooldown_timer <= 0.0
-
-		if can_walljump:
+		if is_on_wall_only() and REMAINING_WALL_JUMPS > 0:
 			var wn = get_wall_collision_normal()
-			var wall_jump_dir = (-wn + Vector3.UP).normalized()
-			velocity.x = velocity.x * WALL_JUMP_INHERIT_FACTOR + wall_jump_dir.x * WALL_JUMP_FORCE
-			velocity.z = velocity.z * WALL_JUMP_INHERIT_FACTOR + wall_jump_dir.z * WALL_JUMP_FORCE
-			velocity.y = max(velocity.y, JUMP_HEIGHT * 2.5)
+			velocity.x = wn.x * WALL_JUMP_FORCE
+			velocity.z = wn.z * WALL_JUMP_FORCE
+			velocity.y = JUMP_HEIGHT * 2.5
 			REMAINING_WALL_JUMPS -= 1
 			IS_JUMPING = true
 			grounded_time = 0.0
-			walljump_cooldown_timer = WALL_JUMP_COOLDOWN
-	elif not is_on_wall_only() and not GROUNDED and IS_MOVING and velocity.y > -0.1:
-		apply_bhop_redirect(direction)
-	elif GROUNDED and not IS_SLAMMING:
-		velocity.y = JUMP_HEIGHT
-		IS_JUMPING = true
-		REMAINING_WALL_JUMPS = 3
-		grounded_time = 0.0
-		apply_bhop_redirect(direction)
-	elif GROUNDED and IS_SLAMMING and grounded_time <= SLAM_WAIT:
-		IS_JUMPING = true
-		grounded_time = 0.0
-		REMAINING_WALL_JUMPS = 3
-		velocity.y = SLAM_SPEED
-		IS_SLAMMING = false
+		elif GROUNDED and not IS_SLAMMING:
+			velocity.y = JUMP_HEIGHT
+			IS_JUMPING = true
+			REMAINING_WALL_JUMPS = 3
+			grounded_time = 0.0
+		elif GROUNDED and IS_SLAMMING and grounded_time <= SLAM_WAIT:
+			IS_JUMPING = true
+			grounded_time = 0.0
+			REMAINING_WALL_JUMPS = 3
+			velocity.y = SLAM_SPEED
+			IS_SLAMMING = false
 
+	# Dashing
 	if Input.is_action_just_pressed("dash") and not IS_DASHING and REMAINING_DASHES > 0:
 		start_dash(direction)
 		REMAINING_DASHES -= 1
@@ -168,29 +175,31 @@ func _physics_process(delta):
 				REMAINING_DASHES += 1
 				DASH_CHARGE = 0
 
+	# Slam
 	if Input.is_action_just_pressed("slam") and not GROUNDED:
 		velocity.y = -SLAM_SPEED
 		velocity.x = 0
 		velocity.z = 0
 		IS_SLAMMING = true
 
+	# Camera tilt
 	var target_tilt = 0.0
 	if IS_DASHING:
 		if Input.is_action_pressed("left"):
 			target_tilt = MAX_TILT
 		elif Input.is_action_pressed("right"):
 			target_tilt = -MAX_TILT
-	TILT_ANGLE = lerp(TILT_ANGLE, target_tilt, delta * TILT_SPEED)
+	TILT_ANGLE = lerp(TILT_ANGLE, target_tilt, delta * (TILT_SPEED * 1.5 if IS_DASHING else TILT_SPEED))
 	camera.rotation.z = TILT_ANGLE
 
+	# FOV smoothing
 	camera.fov = lerp(camera.fov, TARGET_FOV, delta * FOV_LERP_SPEED)
 
 	move_and_slide()
 
-func start_dash(direction):
+func start_dash(direction: Vector3):
 	if direction == Vector3.ZERO:
 		direction = -camera.global_transform.basis.z.normalized()
-
 	IS_DASHING = true
 	velocity.x += direction.x * DASH_SPEED
 	velocity.z += direction.z * DASH_SPEED
@@ -203,8 +212,9 @@ func start_dash(direction):
 	else:
 		TARGET_FOV = BASE_FOV + 6.0
 
-	await get_tree().create_timer(0.2).timeout
+	dash_timer.start()  # Use timer instead of creating one-shot timers every dash
 
+func _on_dash_timeout():
 	TARGET_FOV = BASE_FOV
 	IS_DASHING = false
 

@@ -5,13 +5,15 @@ extends Node3D
 @export var ui: Control
 @export var fire_sounds: Array[AudioStream] = []
 
-var sway_tween: Tween = null
-var sway_active: bool = false
 var fire_button_held: bool = false
 var is_firing: bool = false
 var is_reloading: bool = false
 var moving: bool = false
 
+enum SwayState { LEFT, CENTER_FROM_LEFT, RIGHT, CENTER_FROM_RIGHT }
+var sway_state: SwayState = SwayState.LEFT
+var sway_progress: float = 0.0
+var sway_speed: float = 1.0
 
 func _ready():
 	var PISTOL = load_json("res://4ev3r/gundata/pistol.json")
@@ -26,7 +28,6 @@ func _ready():
 
 	if ui:
 		ui.Gun = self
-
 
 func _input(event):
 	moving = (
@@ -50,10 +51,69 @@ func _input(event):
 
 func _process(delta):
 	CURRENT_GUN["animation"].play(CURRENT_GUN["current_animation"])
+	
+	var sprite: AnimatedSprite2D = CURRENT_GUN["animation"]
+	
+	if moving and not is_reloading:
+		# sway_time = duration for full left-to-right (2 legs: left->center->right)
+		sway_speed = 2.0 / CURRENT_GUN["sway_time"]
+		sway_progress += delta * sway_speed
+		
+		if sway_progress >= 1.0:
+			sway_progress = 0.0
+			# Advance to next state
+			match sway_state:
+				SwayState.LEFT:
+					sway_state = SwayState.CENTER_FROM_LEFT
+				SwayState.CENTER_FROM_LEFT:
+					sway_state = SwayState.RIGHT
+				SwayState.RIGHT:
+					sway_state = SwayState.CENTER_FROM_RIGHT
+				SwayState.CENTER_FROM_RIGHT:
+					sway_state = SwayState.LEFT
+		
+		# Get start, end, and control points for quadratic Bezier arc
+		var start_pos: Vector2
+		var end_pos: Vector2
+		var control_pos: Vector2
+		
+		match sway_state:
+			SwayState.LEFT:
+				# Arc from center up to left
+				start_pos = Vector2(CURRENT_GUN["centeredX"], CURRENT_GUN["centeredY"])
+				end_pos = Vector2(CURRENT_GUN["walkXLeft"], CURRENT_GUN["walkYBottom"])
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)  # <-- NEGATIVE for upward arc
+			SwayState.CENTER_FROM_LEFT:
+				# Arc from left back up to center
+				start_pos = Vector2(CURRENT_GUN["walkXLeft"], CURRENT_GUN["walkYBottom"])
+				end_pos = Vector2(CURRENT_GUN["centeredX"], CURRENT_GUN["centeredY"])
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)  # <-- NEGATIVE for upward arc
+			SwayState.RIGHT:
+				# Arc from center up to right
+				start_pos = Vector2(CURRENT_GUN["centeredX"], CURRENT_GUN["centeredY"])
+				end_pos = Vector2(CURRENT_GUN["walkXRight"], CURRENT_GUN["walkYBottom"])
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)  # <-- NEGATIVE for upward arc
+			SwayState.CENTER_FROM_RIGHT:
+				# Arc from right back up to center
+				start_pos = Vector2(CURRENT_GUN["walkXRight"], CURRENT_GUN["walkYBottom"])
+				end_pos = Vector2(CURRENT_GUN["centeredX"], CURRENT_GUN["centeredY"])
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)  # <-- NEGATIVE for upward arc
+		
+		# Linear progress - no ease() so it doesn't slow down at waypoints
+		var t = sway_progress  # <-- REMOVED ease(), now linear
+		sprite.position = _quadratic_bezier(start_pos, control_pos, end_pos, t)
+		
+	# When not moving, do nothing - gun stays exactly where it is
 
-	if moving and not sway_active and not is_reloading:
-		sway_active = true
-		_start_sway()
+
+func _quadratic_bezier(p0: Vector2, p1: Vector2, p2: Vector2, t: float) -> Vector2:
+	# Quadratic Bezier: B(t) = (1-t)²P0 + 2(1-t)tP1 + t²P2
+	var one_minus_t = 1.0 - t
+	return (p0 * one_minus_t * one_minus_t) + (p1 * 2.0 * one_minus_t * t) + (p2 * t * t)
 
 
 func _start_fire() -> void:
@@ -121,67 +181,6 @@ func _pistol_reload() -> void:
 	await t.finished
 
 	is_reloading = false
-
-
-func _start_sway() -> void:
-	if sway_tween and sway_tween.is_running():
-		return
-	sway_tween = _sway_step()
-
-
-func _sway_step() -> Tween:
-	var sprite: AnimatedSprite2D = CURRENT_GUN["animation"]
-	var tween := create_tween()
-
-	var target_pos = _get_sway_target()
-
-	tween.set_ease(Tween.EASE_IN_OUT)
-	tween.tween_property(sprite, "position", target_pos, CURRENT_GUN["sway_time"])
-
-	tween.finished.connect(func():
-		if moving and not is_reloading:
-			var current = CURRENT_GUN["targetTweenDir"]
-			var prev = CURRENT_GUN["prevTweenDir"]
-
-			CURRENT_GUN["targetTweenDir"] = _next_sway_dir(current, prev)
-			CURRENT_GUN["prevTweenDir"] = current
-			sway_tween = _sway_step()
-		else:
-			sway_active = false
-	)
-
-	return tween
-
-func _next_sway_dir(current: String, prev: String) -> String:
-	match current:
-		"left":
-			return "center"
-
-		"right":
-			return "center"
-
-		"center":
-			# Decide based on previous sway direction
-			if prev == "left":
-				return "right"
-			elif prev == "right":
-				return "left"
-			else:
-				# First-time sway; pick a random side
-				return ["left", "right"][randi_range(0, 1)]
-
-		_:
-			return "center"
-
-
-func _get_sway_target() -> Vector2:
-	match CURRENT_GUN["targetTweenDir"]:
-		"left":
-			return Vector2(CURRENT_GUN["walkXLeft"], CURRENT_GUN["walkYBottom"])
-		"right":
-			return Vector2(CURRENT_GUN["walkXRight"], CURRENT_GUN["walkYBottom"])
-		_:
-			return Vector2(CURRENT_GUN["centeredX"], CURRENT_GUN["centeredY"])
 
 
 func load_json(path: String) -> Dictionary:

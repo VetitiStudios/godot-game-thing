@@ -14,7 +14,7 @@
   "walkXLeft": 859.0,
   "walkYBottom": 605.0,
   "walkXRight": 1019.0,
-  "sway_time": 0.5,
+  "sway_time": 2.0,
   "targetTweenDir": "left",
   "prevTweenDir": "",
   "damage": 5,
