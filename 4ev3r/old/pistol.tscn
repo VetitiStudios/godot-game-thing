@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3 uid="uid://ctgenm84g0wv7"]
+
+[ext_resource type="Texture2D" uid="uid://d1tt3xsosn0tf" path="res://4ev3r/old/glock.png" id="1_udomu"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sajvy"]
+atlas = ExtResource("1_udomu")
+region = Rect2(0, 0, 256, 256)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nxow2"]
+atlas = ExtResource("1_udomu")
+region = Rect2(256, 0, 256, 256)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_x0gaq"]
+animations = [{
+"frames": [],
+"loop": true,
+"name": &"default",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_sajvy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nxow2")
+}],
+"loop": true,
+"name": &"new_animation",
+"speed": 5.0
+}]
+
+[node name="pistol" type="Node3D"]
+
+[node name="AnimatedSprite3D" type="AnimatedSprite3D" parent="."]
+double_sided = false
+no_depth_test = true
+sprite_frames = SubResource("SpriteFrames_x0gaq")
+animation = &"new_animation"
