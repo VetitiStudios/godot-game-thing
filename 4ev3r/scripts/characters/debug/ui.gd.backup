@@ -1,0 +1,22 @@
+extends Control
+
+@onready var label = $"label"
+
+var player: CharacterBody3D = null
+var gun: Node3D = null
+var last_velocity := Vector3.ZERO
+
+func _process(delta):
+	if player == null:
+		label.text = "player is null"
+		return
+	if gun == null:
+		label.text = "gun is null"
+		return
+	var speed = player.SPEED
+	var accel = round((player.velocity - last_velocity).length() / delta) / 100.0
+	var dash = player.REMAINING_DASHES
+	var dashCharge = player.DASH_CHARGE*100
+	var fps = Engine.get_frames_per_second() 
+
+	label.text = "Speed: " + str(speed) + "\n" + "Accel: " + str(accel) + "\n" + "Wall Jumps: " + str(player.REMAINING_WALL_JUMPS) + "\n" + "FPS: " + str(fps) + "\n" + "DASH: " + str(dash) + "\n" + "DASH CHARGE: " + str(dashCharge) + " / 100" + "\n" + "Ammo: " + str(gun.current_ammo) + " : " + str(gun.max_ammo)

@@ -1,0 +1,180 @@
+extends Node3D
+
+@export var ui: Control
+@export var fire_sounds: Array[AudioStream] = []
+
+@export_group("Gun Data")
+@export var fire_animation_len: float = 0.15
+@export var max_ammo: int = 12
+@export var type: String = "pistol"
+@export var centeredX: float = 939.0
+@export var centeredY: float = 541.0
+@export var reloadX: float = 939.0
+@export var reloadTopY: float = 541.0
+@export var reloadBottomY: float = 914.0
+@export var reloadTimer: float = 3.0
+@export var walkXLeft: float = 859.0
+@export var walkYBottom: float = 605.0
+@export var walkXRight: float = 1019.0
+@export var sway_time: float = 2.0
+@export var damage: int = 5
+
+var fire_button_held: bool = false
+var is_firing: bool = false
+var is_reloading: bool = false
+var moving: bool = false
+var current_ammo: int = 12
+var current_animation: String = "idle"
+
+@onready var animation: AnimatedSprite2D = $Control/pistol
+
+enum SwayState { LEFT, CENTER_FROM_LEFT, RIGHT, CENTER_FROM_RIGHT }
+var sway_state: SwayState = SwayState.LEFT
+var sway_progress: float = 0.0
+var sway_speed: float = 1.0
+
+func _ready():
+	current_ammo = max_ammo
+	if ui == null:
+		ui = get_node_or_null("../../camPivot/camera/UI/Control")
+	if ui:
+		ui.gun = self
+
+func _input(event):
+	moving = (
+		Input.is_action_pressed("forward") or
+		Input.is_action_pressed("backward") or
+		Input.is_action_pressed("left") or
+		Input.is_action_pressed("right")
+	)
+
+	if Input.is_action_just_pressed("fire"):
+		fire_button_held = true
+		_start_fire()
+	elif Input.is_action_just_released("fire"):
+		fire_button_held = false
+
+	if Input.is_action_just_pressed("reload") and not is_reloading:
+		if type == "pistol":
+			is_reloading = true
+			_reload()
+
+
+func _process(delta):
+	animation.play(current_animation)
+	
+	if moving and not is_reloading:
+		sway_speed = 2.0 / sway_time
+		sway_progress += delta * sway_speed
+		
+		if sway_progress >= 1.0:
+			sway_progress = 0.0
+			match sway_state:
+				SwayState.LEFT:
+					sway_state = SwayState.CENTER_FROM_LEFT
+				SwayState.CENTER_FROM_LEFT:
+					sway_state = SwayState.RIGHT
+				SwayState.RIGHT:
+					sway_state = SwayState.CENTER_FROM_RIGHT
+				SwayState.CENTER_FROM_RIGHT:
+					sway_state = SwayState.LEFT
+		
+		var start_pos: Vector2
+		var end_pos: Vector2
+		var control_pos: Vector2
+		
+		match sway_state:
+			SwayState.LEFT:
+				start_pos = Vector2(centeredX, centeredY)
+				end_pos = Vector2(walkXLeft, walkYBottom)
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)
+			SwayState.CENTER_FROM_LEFT:
+				start_pos = Vector2(walkXLeft, walkYBottom)
+				end_pos = Vector2(centeredX, centeredY)
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)
+			SwayState.RIGHT:
+				start_pos = Vector2(centeredX, centeredY)
+				end_pos = Vector2(walkXRight, walkYBottom)
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)
+			SwayState.CENTER_FROM_RIGHT:
+				start_pos = Vector2(walkXRight, walkYBottom)
+				end_pos = Vector2(centeredX, centeredY)
+				var mid = (start_pos + end_pos) / 2.0
+				control_pos = mid + Vector2(0, -30)
+		
+		var t = sway_progress
+		animation.position = _quadratic_bezier(start_pos, control_pos, end_pos, t)
+
+
+func _quadratic_bezier(p0: Vector2, p1: Vector2, p2: Vector2, t: float) -> Vector2:
+	var one_minus_t = 1.0 - t
+	return (p0 * one_minus_t * one_minus_t) + (p1 * 2.0 * one_minus_t * t) + (p2 * t * t)
+
+
+func _start_fire() -> void:
+	if is_reloading:
+		return
+	if current_ammo <= 0:
+		current_animation = "empty"
+		return
+	if not is_firing:
+		is_firing = true
+		_fire_loop()
+
+
+func _fire_loop() -> void:
+	if current_ammo <= 0:
+		current_animation = "empty"
+		is_firing = false
+		return
+
+	current_animation = "fire"
+	current_ammo -= 1
+
+	var fire_timer := Timer.new()
+	fire_timer.one_shot = true
+	fire_timer.wait_time = fire_animation_len
+	add_child(fire_timer)
+	fire_timer.start()
+	await fire_timer.timeout
+	fire_timer.queue_free()
+
+	current_animation = "idle" if current_ammo > 0 else "empty"
+
+	if fire_button_held and current_ammo > 0:
+		_fire_loop()
+	else:
+		is_firing = false
+
+
+func _reload() -> void:
+	current_animation = "empty"
+	current_ammo = 0
+
+	var t := create_tween()
+	t.set_ease(Tween.EASE_IN)
+	t.tween_property(
+		animation,
+		"position",
+		Vector2(reloadX, reloadBottomY),
+		reloadTimer / 2
+	)
+	await t.finished
+
+	current_ammo = max_ammo
+	current_animation = "idle"
+
+	t = create_tween()
+	t.set_ease(Tween.EASE_OUT)
+	t.tween_property(
+		animation,
+		"position",
+		Vector2(reloadX, reloadTopY),
+		reloadTimer / 2
+	)
+	await t.finished
+
+	is_reloading = false

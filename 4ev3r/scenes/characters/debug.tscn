@@ -1,0 +1,44 @@
+[gd_scene load_steps=5 format=3 uid="uid://npmsbepnx4up"]
+
+[ext_resource type="Script" uid="uid://b82drnpaly57h" path="res://4ev3r/scripts/characters/debug/controller.gd" id="1_dc64f"]
+[ext_resource type="Script" uid="uid://bhpkafrevehx6" path="res://4ev3r/scripts/characters/debug/ui.gd" id="2_tjaaq"]
+[ext_resource type="PackedScene" uid="uid://cvs1b5obfg2ba" path="res://4ev3r/scenes/guns/pistol.tscn" id="3_hvu2o"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_cdbq2"]
+
+[node name="debug" type="CharacterBody3D"]
+script = ExtResource("1_dc64f")
+DASH_CHARGE_SPEED = 0.1
+
+[node name="collider" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_cdbq2")
+
+[node name="DashTimer" type="Timer" parent="."]
+
+[node name="camPivot" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="camera" type="Camera3D" parent="camPivot"]
+
+[node name="UI" type="Node3D" parent="camPivot/camera"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+
+[node name="Control" type="Control" parent="camPivot/camera/UI"]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 128.0
+offset_bottom = 24.0
+script = ExtResource("2_tjaaq")
+
+[node name="label" type="Label" parent="camPivot/camera/UI/Control"]
+layout_mode = 0
+offset_right = 188.0
+offset_bottom = 23.0
+text = "SPEED:"
+
+[node name="AudioListener3D" type="AudioListener3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+current = true
+
+[node name="Pistol" parent="." node_paths=PackedStringArray("ui") instance=ExtResource("3_hvu2o")]
+ui = NodePath("../camPivot/camera/UI/Control")

@@ -1,0 +1,101 @@
+[gd_scene load_steps=14 format=3 uid="uid://cvs1b5obfg2ba"]
+
+[ext_resource type="Script" uid="uid://nibqibp3okh7" path="res://4ev3r/scripts/guns/pistol.gd" id="1_2656o"]
+[ext_resource type="Texture2D" uid="uid://egc4kpxnvamv" path="res://4ev3r/assets/pistol/empty.png" id="2_qywb5"]
+[ext_resource type="Texture2D" uid="uid://ij3htx5yc3w0" path="res://4ev3r/assets/pistol/idle.png" id="3_f63q1"]
+[ext_resource type="Texture2D" uid="uid://bs7n0bop1g8p" path="res://4ev3r/assets/pistol/meow.png" id="4_f63q1"]
+[ext_resource type="AudioStream" uid="uid://temqs5cxa6ix" path="res://4ev3r/assets/sounds/shot.mp3" id="4_qywb5"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_kmg5g"]
+atlas = ExtResource("2_qywb5")
+region = Rect2(0, 0, 205, 178)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_ootxn"]
+atlas = ExtResource("2_qywb5")
+region = Rect2(205, 0, 205, 178)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_vgnix"]
+atlas = ExtResource("3_f63q1")
+region = Rect2(0, 0, 205, 178)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_cw3nu"]
+atlas = ExtResource("2_qywb5")
+region = Rect2(0, 0, 205, 178)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_d3ppy"]
+atlas = ExtResource("3_f63q1")
+region = Rect2(0, 0, 205, 178)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_3sfuv"]
+atlas = ExtResource("3_f63q1")
+region = Rect2(205, 0, 205, 178)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_17bl7"]
+atlas = ExtResource("3_f63q1")
+region = Rect2(410, 0, 205, 178)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_7qe1f"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_kmg5g")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_ootxn")
+}],
+"loop": true,
+"name": &"empty",
+"speed": 8.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_vgnix")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_cw3nu")
+}],
+"loop": false,
+"name": &"fire",
+"speed": 12.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_d3ppy")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_3sfuv")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_17bl7")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 8.0
+}]
+
+[node name="Pistol" type="Node3D"]
+script = ExtResource("1_2656o")
+
+[node name="FireTimer" type="Timer" parent="."]
+
+[node name="Control" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 40.0
+offset_bottom = 40.0
+
+[node name="pistol" type="AnimatedSprite2D" parent="Control"]
+position = Vector2(939, 541)
+scale = Vector2(2, 2)
+sprite_frames = SubResource("SpriteFrames_7qe1f")
+animation = &"fire"
+
+[node name="Sprite2D" type="Sprite2D" parent="Control"]
+position = Vector2(640, 344)
+scale = Vector2(0.5, 0.5)
+texture = ExtResource("4_f63q1")
+
+[node name="AudioStreamPlayer" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_qywb5")
+volume_db = -16.43
+max_polyphony = 1000
