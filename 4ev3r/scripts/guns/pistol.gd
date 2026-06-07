@@ -1,4 +1,9 @@
+class_name Pistol
 extends Node3D
+
+## The controller for the pistol.
+
+enum SwayState { LEFT, CENTER_FROM_LEFT, RIGHT, CENTER_FROM_RIGHT }
 
 @export var ui: Control
 @export var fire_sounds: Array[AudioStream] = []
@@ -23,13 +28,13 @@ var is_reloading: bool = false
 var moving: bool = false
 var current_ammo: int = 12
 var current_animation: String = "idle"
-
-@onready var animation: AnimatedSprite2D = $Control/pistol
-
-enum SwayState { LEFT, CENTER_FROM_LEFT, RIGHT, CENTER_FROM_RIGHT }
 var sway_state: SwayState = SwayState.LEFT
 var sway_progress: float = 0.0
 var sway_speed: float = 1.0
+
+@onready var animation: AnimatedSprite2D = $Control/pistol
+
+
 
 func _ready():
 	current_ammo = max_ammo
